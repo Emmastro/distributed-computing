@@ -3,4 +3,4 @@
 import requests
 
 def main(task_id):
-    return task_id    
+    return task_id

@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from users.models import User
 
 from .models import Job, Task
 
@@ -15,5 +14,6 @@ class JobSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ('id', 'job', 'status', 'result', 'started_at', 'finished_at')
+        fields = ('id', 'job', 'status', 'result', 'started_at', 'finished_at',
+                  'created_at', 'task_id', 'runner')
         read_only_fields = ('id', 'created_at', 'task_id',)

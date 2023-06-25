@@ -22,7 +22,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django.contrib.sites',
     'corsheaders',
-    'oauth2_provider',
+    'rest_framework.authtoken'
 ]
 
 # Django All Auth config. Add all of this.
@@ -35,21 +35,16 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "oauth2_provider.middleware.OAuth2TokenMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     
 ]
 
 AUTHENTICATION_BACKENDS = (
-    "oauth2_provider.backends.OAuth2Backend",
     "django.contrib.auth.backends.ModelBackend",
 )
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-      'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-    ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     )
