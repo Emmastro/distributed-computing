@@ -31,9 +31,24 @@ class Task(models.Model):
         return f'{self.job.name} - {self.task_id}'
 
     def save(self, *args, **kwargs):
-        last_running_task = Task.objects.filter(
-            status='running', job=self.job).last()
+
+        if self.status == 'pending':
+            last_running_task = Task.objects.filter(
+                status='pending', job=self.job).last()
+            print("last_running_task", last_running_task)
+
+            self.task_id = last_running_task.task_id + 1 if last_running_task else 1
+            print(self.task_id, self.runner)
+        elif self.status == 'running':
+            self.started_at = datetime.now()
+        elif self.status == 'finished':
+            self.finished_at = datetime.now()
         
-        self.task_id = last_running_task.task_id + 1 if last_running_task else 1
-        print(args, kwargs, self, self.task_id, self.runner)
         super(Task, self).save(*args, **kwargs)
+
+        if self.job.task_set.filter(status='finished').count() == self.job.nbr_tasks:
+            self.job.status = 'finished'
+            self.job.save()
+        if self.task_id == self.job.nbr_tasks:
+            self.job.status = 'no-pending-tasks'
+            self.job.save() 
