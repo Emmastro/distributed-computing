@@ -1,4 +1,8 @@
+import logging
 from django.db import models
+from django.utils import timezone
+
+logging.basicConfig(level=logging.INFO)
 
 
 class Job(models.Model):
@@ -33,22 +37,28 @@ class Task(models.Model):
     def save(self, *args, **kwargs):
 
         if self.status == 'pending':
-            last_running_task = Task.objects.filter(
-                status='pending', job=self.job).last()
-            print("last_running_task", last_running_task)
+            last_task = Task.objects.filter(job=self.job).last()
+            print("last_task", last_task)
 
-            self.task_id = last_running_task.task_id + 1 if last_running_task else 1
-            print(self.task_id, self.runner)
+            self.task_id = last_task.task_id + 1 if last_task else 1
+
+            if self.task_id > self.job.nbr_tasks:
+                logging.warning("No more tasks available")
+                return
+
         elif self.status == 'running':
-            self.started_at = datetime.now()
+            self.started_at = timezone.now()
         elif self.status == 'finished':
-            self.finished_at = datetime.now()
-        
-        super(Task, self).save(*args, **kwargs)
+            self.finished_at = timezone.now()
+            logging.info(
+                f'Task {self.task_id} finished, with result: {self.result}')
 
         if self.job.task_set.filter(status='finished').count() == self.job.nbr_tasks:
             self.job.status = 'finished'
             self.job.save()
+
         if self.task_id == self.job.nbr_tasks:
             self.job.status = 'no-pending-tasks'
-            self.job.save() 
+            self.job.save()
+
+        return super(Task, self).save(*args, **kwargs)

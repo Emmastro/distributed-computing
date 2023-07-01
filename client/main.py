@@ -1,26 +1,34 @@
-import requests 
+import json
+import requests
 import importlib
 import time
+import logging
 
-endpoint = "http://localhost:8000"
+logging.basicConfig(level=logging.INFO)
+
+endpoint = "http://127.0.0.1:8000"
+# test access token
 access_token = "f0e1df66ee254bc5bb141e8033bf6e82687554ed"
-headers = {
+
+HEADERS = {
     "Authorization": f"Token {access_token}",
     "Cache-Control": "no-cache",
     "Content-Type": "application/json"
 }
 
+
 def request_pending_task():
     url = f"{endpoint}/tasks/request_task/"
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=HEADERS)
     new_task = response.json()
     return new_task
 
+
 def get_job_file(new_task):
+
     headers = {
-    "Authorization": f"Token {access_token}",
-    "Cache-Control": "no-cache",
-    "Content-Type": "text/plain"
+        **HEADERS,
+        "Content-Type": "text/plain"
     }
     url = f"{endpoint}/jobs/{new_task['job']}/get_job_file/"
     response = requests.get(url, headers=headers)
@@ -31,45 +39,46 @@ def get_job_file(new_task):
 
 
 def run_job(filename, new_task):
-    # import the main function from the job and run it passing the task id
+
     module = importlib.import_module(f"jobs.{filename}")
-    print(module)
 
     # update task to started
     url = f"{endpoint}/tasks/{new_task['id']}/"
     data = {
-        "status": "started"
+        "status": "running"
     }
-    response = requests.patch(url, headers=headers, data=data)
-    
+    response = requests.patch(url, headers=HEADERS, data=json.dumps(data))
+
     try:
         result = module.main(new_task['task_id'])
         data = {
-        "result": result,
-        "status": "finished"
+            "result": str(result),
+            "status": "finished"
         }
+        logging.info(f"Task {new_task['task_id']} finished")
     except Exception as e:
         data = {
-        "result": str(e),
-        "status": "failed"
+            "result": str(e),
+            "status": "failed"
         }
+        logging.error(f"Task {new_task['task_id']} failed")
 
-    response = requests.post(url, headers=headers, data=data)
+    response = requests.patch(url, headers=HEADERS, data=json.dumps(data))
 
     return response.json()
 
-JOB_FOUND_STATUS_CODE = 1
 
 def mainloop():
+
     while 1:
         new_task = request_pending_task()
-        # TODO: add status code on task response
-        if hasattr(new_task, "message") and new_task['message'] == 'no jobs available':
+
+        if new_task.get("message", False) == 'no jobs available':
+            logging.info("No new tasks, sleeping for 5 seconds")
+            time.sleep(5)
+        else:
             filename = get_job_file(new_task)
             run_job(filename, new_task)
-        else:
-            print("No new tasks, sleeping for 5 seconds")
-            time.sleep(5)
 
 
 if __name__ == "__main__":
